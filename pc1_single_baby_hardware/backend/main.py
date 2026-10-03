@@ -300,7 +300,44 @@ async def process_frame(file: UploadFile = File(...)):
 
 @app.get("/")
 def read_root():
-    return {"status": "System Online"}
+    return {"status": "System Online", "service": "NAVAAYU Edge AI"}
+
+@app.get("/health")
+def health_check():
+    return {"status": "healthy", "service": "NAVAAYU Edge AI", "timestamp": time.time()}
+
+@app.get("/latest")
+@app.get("/latest/{baby_id}")
+def get_latest(baby_id: str = None):
+    update_dynamic_vitals()
+    active_id = baby_id or dashboard_data.get("activeBabyId", "NB-2026-001")
+    target_baby = None
+    for b in dashboard_data.get("babies", []):
+        if b.get("id") == active_id or b.get("bedId") == active_id:
+            target_baby = b
+            break
+    if not target_baby and dashboard_data.get("babies"):
+        target_baby = dashboard_data["babies"][0]
+    
+    vitals = target_baby.get("vitals", {}) if target_baby else {}
+    return {
+        "status": "success",
+        "baby_id": active_id,
+        "name": target_baby.get("name", "Neonatal Patient") if target_baby else "Patient",
+        "timestamp": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+        "vitals": {
+            "heart_rate_bpm": vitals.get("heartRate", 140),
+            "oxygen_saturation": vitals.get("spo2", 98),
+            "respiratory_rate_bpm": vitals.get("respRate", 44),
+            "temperature_c": vitals.get("temp", 36.8),
+            "blood_pressure": vitals.get("bp", 48)
+        },
+        "risk_score": target_baby.get("riskScore", 15) if target_baby else 15,
+        "prediction": target_baby.get("status", "SAFE") if target_baby else "SAFE",
+        "confidence": target_baby.get("confidence", 95) if target_baby else 95,
+        "motion": dashboard_data.get("motionMonitoring", {}),
+        "cry": dashboard_data.get("cryDetection", {})
+    }
 
 if __name__ == "__main__":
     import uvicorn

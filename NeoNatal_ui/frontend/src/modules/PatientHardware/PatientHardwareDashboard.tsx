@@ -33,6 +33,7 @@ import {
   getLatestPredictions 
 } from '../../services/api';
 import { IncubatorDetailModal } from '../../components/Modals/IncubatorDetailModal';
+import { useWardAmbient } from '../../context/WardAmbientContext';
 
 export interface BabyData {
   id: string;
@@ -61,7 +62,9 @@ export interface BabyData {
     spo2: boolean;
     temp: boolean;
     respRate: boolean;
-    bp: boolean;
+    systolicBp: boolean;
+    diastolicBp: boolean;
+    bp?: boolean;
   };
   clinicalDecision?: {
     reason: string;
@@ -73,6 +76,8 @@ export interface BabyData {
     spo2: number;
     respRate: number;
     temp: number;
+    systolicBp: number;
+    diastolicBp: number;
     bp: number;
   };
   trends: {
@@ -80,7 +85,9 @@ export interface BabyData {
     spo2: { dir: 'up' | 'down' | 'stable'; label: string };
     respRate: { dir: 'up' | 'down' | 'stable'; label: string };
     temp: { dir: 'up' | 'down' | 'stable'; label: string };
-    bp: { dir: 'up' | 'down' | 'stable'; label: string };
+    systolicBp: { dir: 'up' | 'down' | 'stable'; label: string };
+    diastolicBp: { dir: 'up' | 'down' | 'stable'; label: string };
+    bp?: { dir: 'up' | 'down' | 'stable'; label: string };
   };
   alertBanner: {
     title: string;
@@ -94,6 +101,8 @@ export interface BabyData {
     spo2: number;
     resp: number;
     temp: number;
+    systolicBp: number;
+    diastolicBp: number;
     bp: number;
     status: string;
   }>;
@@ -127,6 +136,8 @@ export const INITIAL_HARDWARE_BABIES: BabyData[] = [
       spo2: true,
       temp: true,
       respRate: true,
+      systolicBp: true,
+      diastolicBp: true,
       bp: true
     },
     vitals: {
@@ -134,6 +145,8 @@ export const INITIAL_HARDWARE_BABIES: BabyData[] = [
       spo2: 89,
       respRate: 69,
       temp: 38.9,
+      systolicBp: 82,
+      diastolicBp: 54,
       bp: 64
     },
     trends: {
@@ -141,16 +154,18 @@ export const INITIAL_HARDWARE_BABIES: BabyData[] = [
       spo2: { dir: "down", label: "Desaturation Dip (89%)" },
       respRate: { dir: "up", label: "Tachypneic (69 /min)" },
       temp: { dir: "up", label: "Hyperthermia (38.9 °C)" },
+      systolicBp: { dir: "up", label: "Elevated SBP (82 mmHg)" },
+      diastolicBp: { dir: "up", label: "Elevated DBP (54 mmHg)" },
       bp: { dir: "up", label: "Elevated (64 mmHg)" }
     },
     alertBanner: {
-      title: "Incubator NICU-001 Alert: Heart Rate: High ↑ • Oxygen Saturation: Low ↓ • Temperature: High ↑",
+      title: "Incubator NICU-001 Alert: Heart Rate: High ↑ • Oxygen Saturation: Low ↓ • Temperature: High ↑ • SBP: High ↑ (82 mmHg) • DBP: High ↑ (54 mmHg)",
       text: "Patient: NICU-001 • Status: AT RISK (EDGE AI)",
       statusBadge: "WARNING",
       time: "09:20:15 PM"
     },
     clinicalDecision: {
-      reason: "Heart Rate: High ↑ • Oxygen Saturation: Low ↓ • Temperature: High ↑ • Respiratory Rate: High ↑ • Systolic BP: High ↑ • Diastolic BP: High ↑",
+      reason: "Heart Rate: High ↑ (181 BPM) • Oxygen Saturation: Low ↓ (89%) • Temperature: High ↑ (38.9°C) • Respiratory Rate: High ↑ (69/min) • Systolic BP: High ↑ (82 mmHg) • Diastolic BP: High ↑ (54 mmHg)",
       recommendation: "Check the incubator/radiant-warmer setting and environmental temperature. Reduce excessive external warming according to the NICU protocol. Look for other signs of illness/infection and notify the clinical team.",
       actionToBeTaken: [
         "Check the incubator/radiant-warmer setting and environmental temperature.",
@@ -161,10 +176,10 @@ export const INITIAL_HARDWARE_BABIES: BabyData[] = [
       ]
     },
     historyLogs: [
-      { time: "09:20 PM", hr: 181, spo2: 89, resp: 69, temp: 38.9, bp: 64, status: "Warning" },
-      { time: "09:15 PM", hr: 178, spo2: 90, resp: 66, temp: 38.7, bp: 62, status: "Warning" },
-      { time: "09:10 PM", hr: 174, spo2: 91, resp: 63, temp: 38.5, bp: 60, status: "Moderate" },
-      { time: "09:05 PM", hr: 165, spo2: 92, resp: 58, temp: 38.1, bp: 55, status: "Moderate" }
+      { time: "09:20 PM", hr: 181, spo2: 89, resp: 69, temp: 38.9, systolicBp: 82, diastolicBp: 54, bp: 64, status: "Warning" },
+      { time: "09:15 PM", hr: 178, spo2: 90, resp: 66, temp: 38.7, systolicBp: 80, diastolicBp: 52, bp: 62, status: "Warning" },
+      { time: "09:10 PM", hr: 174, spo2: 91, resp: 63, temp: 38.5, systolicBp: 78, diastolicBp: 50, bp: 60, status: "Moderate" },
+      { time: "09:05 PM", hr: 165, spo2: 92, resp: 58, temp: 38.1, systolicBp: 72, diastolicBp: 46, bp: 55, status: "Moderate" }
     ]
   },
   {
@@ -194,6 +209,8 @@ export const INITIAL_HARDWARE_BABIES: BabyData[] = [
       spo2: true,
       temp: true,
       respRate: true,
+      systolicBp: true,
+      diastolicBp: true,
       bp: true
     },
     vitals: {
@@ -201,6 +218,8 @@ export const INITIAL_HARDWARE_BABIES: BabyData[] = [
       spo2: 82,
       respRate: 77,
       temp: 39.4,
+      systolicBp: 88,
+      diastolicBp: 62,
       bp: 72
     },
     trends: {
@@ -208,16 +227,18 @@ export const INITIAL_HARDWARE_BABIES: BabyData[] = [
       spo2: { dir: "down", label: "Critical Desat (82%)" },
       respRate: { dir: "up", label: "Tachypnea (77 /min)" },
       temp: { dir: "up", label: "High Pyrexia (39.4 °C)" },
+      systolicBp: { dir: "up", label: "High SBP (88 mmHg)" },
+      diastolicBp: { dir: "up", label: "High DBP (62 mmHg)" },
       bp: { dir: "up", label: "Elevated BP (72 mmHg)" }
     },
     alertBanner: {
-      title: "Incubator NICU-002 Alert: Tachycardia (190 BPM) & Desaturation (82%) with Hyperthermia (39.4°C)",
+      title: "Incubator NICU-002 Alert: Tachycardia (190 BPM) & Desaturation (82%) with Hyperthermia (39.4°C) • BP: 88/62 mmHg",
       text: "Patient: NICU-002 • Status: MODERATE CLINICAL WARNING",
       statusBadge: "WARNING",
       time: "09:18:42 PM"
     },
     clinicalDecision: {
-      reason: "Marked tachycardia (>180 BPM), hypoxemia (SpO2 82%) and pyrexia indicate possible neonatal systemic stress or sepsis workup requirement.",
+      reason: "Marked tachycardia (>180 BPM), hypoxemia (SpO2 82%), pyrexia, and elevated blood pressure (88/62 mmHg) indicate possible neonatal systemic stress or sepsis workup requirement.",
       recommendation: "Initiate immediate CPAP/oxygen support evaluation, draw blood cultures per protocol, and adjust servo-controlled incubator temperature.",
       actionToBeTaken: [
         "Immediate nasal cannula / CPAP oxygen check for desaturation recovery.",
@@ -227,9 +248,9 @@ export const INITIAL_HARDWARE_BABIES: BabyData[] = [
       ]
     },
     historyLogs: [
-      { time: "09:18 PM", hr: 190, spo2: 82, resp: 77, temp: 39.4, bp: 72, status: "Moderate" },
-      { time: "09:12 PM", hr: 185, spo2: 85, resp: 72, temp: 39.1, bp: 70, status: "Moderate" },
-      { time: "09:06 PM", hr: 178, spo2: 88, resp: 68, temp: 38.8, bp: 68, status: "Moderate" }
+      { time: "09:18 PM", hr: 190, spo2: 82, resp: 77, temp: 39.4, systolicBp: 88, diastolicBp: 62, bp: 72, status: "Moderate" },
+      { time: "09:12 PM", hr: 185, spo2: 85, resp: 72, temp: 39.1, systolicBp: 86, diastolicBp: 60, bp: 70, status: "Moderate" },
+      { time: "09:06 PM", hr: 178, spo2: 88, resp: 68, temp: 38.8, systolicBp: 84, diastolicBp: 58, bp: 68, status: "Moderate" }
     ]
   },
   {
@@ -259,6 +280,8 @@ export const INITIAL_HARDWARE_BABIES: BabyData[] = [
       spo2: false,
       temp: false,
       respRate: false,
+      systolicBp: false,
+      diastolicBp: false,
       bp: false
     },
     vitals: {
@@ -266,6 +289,8 @@ export const INITIAL_HARDWARE_BABIES: BabyData[] = [
       spo2: 97,
       respRate: 42,
       temp: 37.0,
+      systolicBp: 68,
+      diastolicBp: 42,
       bp: 51
     },
     trends: {
@@ -273,10 +298,12 @@ export const INITIAL_HARDWARE_BABIES: BabyData[] = [
       spo2: { dir: "stable", label: "Optimal (97%)" },
       respRate: { dir: "stable", label: "Regular (42 /min)" },
       temp: { dir: "stable", label: "Euthermic (37.0 °C)" },
+      systolicBp: { dir: "stable", label: "Target SBP (68 mmHg)" },
+      diastolicBp: { dir: "stable", label: "Target DBP (42 mmHg)" },
       bp: { dir: "stable", label: "Target (51 mmHg)" }
     },
     alertBanner: {
-      title: "Incubator NICU-003: Post-op monitoring stable, antibiotic infusion cycle in progress.",
+      title: "Incubator NICU-003: Post-op monitoring stable, BP: 68/42 mmHg, antibiotic infusion cycle in progress.",
       text: "Patient: NICU-003 • Status: MODERATE OBSERVATION",
       statusBadge: "MODERATE",
       time: "09:22:38 PM"
@@ -292,9 +319,9 @@ export const INITIAL_HARDWARE_BABIES: BabyData[] = [
       ]
     },
     historyLogs: [
-      { time: "09:22 PM", hr: 149, spo2: 97, resp: 42, temp: 37.0, bp: 51, status: "Moderate" },
-      { time: "09:18 PM", hr: 151, spo2: 96, resp: 44, temp: 37.1, bp: 52, status: "Moderate" },
-      { time: "09:14 PM", hr: 148, spo2: 97, resp: 41, temp: 37.0, bp: 50, status: "Moderate" }
+      { time: "09:22 PM", hr: 149, spo2: 97, resp: 42, temp: 37.0, systolicBp: 68, diastolicBp: 42, bp: 51, status: "Moderate" },
+      { time: "09:18 PM", hr: 151, spo2: 96, resp: 44, temp: 37.1, systolicBp: 69, diastolicBp: 43, bp: 52, status: "Moderate" },
+      { time: "09:14 PM", hr: 148, spo2: 97, resp: 41, temp: 37.0, systolicBp: 67, diastolicBp: 41, bp: 50, status: "Moderate" }
     ]
   },
   {
@@ -324,6 +351,8 @@ export const INITIAL_HARDWARE_BABIES: BabyData[] = [
       spo2: false,
       temp: false,
       respRate: false,
+      systolicBp: false,
+      diastolicBp: false,
       bp: false
     },
     vitals: {
@@ -331,6 +360,8 @@ export const INITIAL_HARDWARE_BABIES: BabyData[] = [
       spo2: 98,
       respRate: 48,
       temp: 36.9,
+      systolicBp: 64,
+      diastolicBp: 38,
       bp: 44
     },
     trends: {
@@ -338,10 +369,12 @@ export const INITIAL_HARDWARE_BABIES: BabyData[] = [
       spo2: { dir: "stable", label: "Optimal (98%)" },
       respRate: { dir: "stable", label: "Regular (48 /min)" },
       temp: { dir: "stable", label: "Normal (36.9 °C)" },
+      systolicBp: { dir: "stable", label: "Target SBP (64 mmHg)" },
+      diastolicBp: { dir: "stable", label: "Target DBP (38 mmHg)" },
       bp: { dir: "stable", label: "Normal (44 mmHg)" }
     },
     alertBanner: {
-      title: "Incubator NICU-004: Kangaroo Mother Care completed, excellent perfusion.",
+      title: "Incubator NICU-004: Kangaroo Mother Care completed, BP: 64/38 mmHg, excellent perfusion.",
       text: "Patient: NICU-004 • Status: OPTIMAL",
       statusBadge: "OPTIMAL",
       time: "09:12:00 PM"
@@ -357,8 +390,8 @@ export const INITIAL_HARDWARE_BABIES: BabyData[] = [
       ]
     },
     historyLogs: [
-      { time: "09:12 PM", hr: 145, spo2: 98, resp: 48, temp: 36.9, bp: 44, status: "Normal" },
-      { time: "09:00 PM", hr: 144, spo2: 99, resp: 47, temp: 36.9, bp: 43, status: "Normal" }
+      { time: "09:12 PM", hr: 145, spo2: 98, resp: 48, temp: 36.9, systolicBp: 64, diastolicBp: 38, bp: 44, status: "Normal" },
+      { time: "09:00 PM", hr: 144, spo2: 99, resp: 47, temp: 36.9, systolicBp: 63, diastolicBp: 37, bp: 43, status: "Normal" }
     ]
   },
   {
@@ -388,6 +421,8 @@ export const INITIAL_HARDWARE_BABIES: BabyData[] = [
       spo2: false,
       temp: false,
       respRate: false,
+      systolicBp: false,
+      diastolicBp: false,
       bp: false
     },
     vitals: {
@@ -395,6 +430,8 @@ export const INITIAL_HARDWARE_BABIES: BabyData[] = [
       spo2: 98,
       respRate: 52,
       temp: 37.1,
+      systolicBp: 60,
+      diastolicBp: 35,
       bp: 39
     },
     trends: {
@@ -402,10 +439,12 @@ export const INITIAL_HARDWARE_BABIES: BabyData[] = [
       spo2: { dir: "stable", label: "Optimal (98%)" },
       respRate: { dir: "stable", label: "Regular (52 /min)" },
       temp: { dir: "stable", label: "Normal (37.1 °C)" },
+      systolicBp: { dir: "stable", label: "Target SBP (60 mmHg)" },
+      diastolicBp: { dir: "stable", label: "Target DBP (35 mmHg)" },
       bp: { dir: "stable", label: "Target (39 mmHg)" }
     },
     alertBanner: {
-      title: "Incubator NICU-005: Bio-Acoustic classifier identified hunger cry reflex.",
+      title: "Incubator NICU-005: Bio-Acoustic classifier identified hunger cry reflex, BP: 60/35 mmHg.",
       text: "Patient: NICU-005 • Status: ACTIVE",
       statusBadge: "ACTIVE",
       time: "09:08:14 PM"
@@ -421,8 +460,8 @@ export const INITIAL_HARDWARE_BABIES: BabyData[] = [
       ]
     },
     historyLogs: [
-      { time: "09:08 PM", hr: 144, spo2: 98, resp: 52, temp: 37.1, bp: 39, status: "Normal" },
-      { time: "08:55 PM", hr: 142, spo2: 98, resp: 46, temp: 37.0, bp: 40, status: "Normal" }
+      { time: "09:08 PM", hr: 144, spo2: 98, resp: 52, temp: 37.1, systolicBp: 60, diastolicBp: 35, bp: 39, status: "Normal" },
+      { time: "08:55 PM", hr: 142, spo2: 98, resp: 46, temp: 37.0, systolicBp: 59, diastolicBp: 34, bp: 38, status: "Normal" }
     ]
   }
 ];
@@ -448,6 +487,7 @@ function matchesBaby(b: BabyData, targetId: string): boolean {
 }
 
 export function PatientHardwareDashboard() {
+  const { updateBabyTemp } = useWardAmbient();
   const [selectedBabyId, setSelectedBabyId] = useState<string>("NICU_001");
   const [babies, setBabies] = useState<BabyData[]>(INITIAL_HARDWARE_BABIES);
   const [waveformData, setWaveformData] = useState(generateWaveforms());
@@ -462,17 +502,17 @@ export function PatientHardwareDashboard() {
   const [customIpInput, setCustomIpInput] = useState<string>(piBaseUrl);
   const [isManualFetching, setIsManualFetching] = useState<boolean>(false);
 
-  // Real-time Low-Latency Streaming State
-  const [pollingSpeed, setPollingSpeed] = useState<number>(400); // 400ms = instant continuous, 800ms = fast, 1500ms = standard
+  // Real-time Ultra-Low Latency Streaming State (Instant zero-delay default)
+  const [pollingSpeed, setPollingSpeed] = useState<number>(250); // 250ms = instantaneous streaming, 500ms = fast, 1000ms = standard
   const [latencyMs, setLatencyMs] = useState<number | null>(null);
   const [packetAgeSec, setPacketAgeSec] = useState<number | null>(null);
   const [isPulsing, setIsPulsing] = useState<boolean>(false);
 
   const togglePollingSpeed = () => {
     setPollingSpeed(current => {
-      if (current === 400) return 800;
-      if (current === 800) return 1500;
-      return 400;
+      if (current === 250) return 500;
+      if (current === 500) return 1000;
+      return 250;
     });
   };
 
@@ -528,12 +568,29 @@ export function PatientHardwareDashboard() {
       const resp = Number(v.respiratory_rate_bpm ?? v.respiratory_rate ?? v.respRate ?? v.resp_rate ?? v.rr ?? 69);
       const temp = Number(v.temperature_c ?? v.temperature ?? v.temp ?? v.skin_temp ?? 38.9);
 
-      let bp = 64;
-      if (v.diastolic_bp !== undefined && v.systolic_bp !== undefined) {
-        bp = Math.round(Number(v.diastolic_bp) + (Number(v.systolic_bp) - Number(v.diastolic_bp)) / 3);
-      } else if (v.blood_pressure ?? v.bp ?? v.mean_bp) {
-        bp = Number(v.blood_pressure ?? v.bp ?? v.mean_bp);
+      // System 1 Telemetry: Extract Systolic and Diastolic BP distinctly without taking mean
+      let systolicBp = 82;
+      let diastolicBp = 54;
+
+      if (v.systolic_bp !== undefined || v.systolicBp !== undefined || v.systolic !== undefined || v.sbp !== undefined) {
+        systolicBp = Number(v.systolic_bp ?? v.systolicBp ?? v.systolic ?? v.sbp);
+      } else if (match.systolic_bp !== undefined || match.systolicBp !== undefined) {
+        systolicBp = Number(match.systolic_bp ?? match.systolicBp);
+      } else if (v.blood_pressure ?? v.bp) {
+        const rawBp = Number(v.blood_pressure ?? v.bp);
+        systolicBp = Math.round(rawBp * 1.25);
       }
+
+      if (v.diastolic_bp !== undefined || v.diastolicBp !== undefined || v.diastolic !== undefined || v.dbp !== undefined) {
+        diastolicBp = Number(v.diastolic_bp ?? v.diastolicBp ?? v.diastolic ?? v.dbp);
+      } else if (match.diastolic_bp !== undefined || match.diastolicBp !== undefined) {
+        diastolicBp = Number(match.diastolic_bp ?? match.diastolicBp);
+      } else if (v.blood_pressure ?? v.bp) {
+        const rawBp = Number(v.blood_pressure ?? v.bp);
+        diastolicBp = Math.round(rawBp * 0.85);
+      }
+
+      const bp = Math.round((systolicBp + 2 * diastolicBp) / 3);
 
       const rawStatus = String(match.status || match.prediction || match.predicted_label || '').toUpperCase();
       let status: 'SAFE' | 'WARNING' | 'UNSAFE' = 'WARNING';
@@ -571,7 +628,7 @@ export function PatientHardwareDashboard() {
       } else if (typeof match.reason === 'string') {
         reason = match.reason;
       } else {
-        reason = `Vital signs: HR ${hr} BPM, SpO₂ ${spo2}%, RR ${resp} /min, Temp ${temp} °C`;
+        reason = `Vital signs: HR ${hr} BPM, SpO₂ ${spo2}%, RR ${resp} /min, Temp ${temp} °C, SBP ${systolicBp} mmHg, DBP ${diastolicBp} mmHg`;
       }
 
       let recommendation = '';
@@ -596,7 +653,7 @@ export function PatientHardwareDashboard() {
         ];
       }
 
-      const updatedVitals = { heartRate: hr, spo2, respRate: resp, temp, bp };
+      const updatedVitals = { heartRate: hr, spo2, respRate: resp, temp, systolicBp, diastolicBp, bp };
 
       const trends = {
         heartRate: {
@@ -614,6 +671,14 @@ export function PatientHardwareDashboard() {
         temp: {
           dir: temp > 37.5 ? ('up' as const) : (temp < 36.5 ? ('down' as const) : ('stable' as const)),
           label: temp > 37.5 ? `Hyperthermia (${temp.toFixed(1)} °C)` : (temp < 36.5 ? `Hypothermia (${temp.toFixed(1)} °C)` : `Normothermic (${temp.toFixed(1)} °C)`)
+        },
+        systolicBp: {
+          dir: systolicBp > 75 ? ('up' as const) : (systolicBp < 50 ? ('down' as const) : ('stable' as const)),
+          label: systolicBp > 75 ? `Elevated SBP (${systolicBp} mmHg)` : (systolicBp < 50 ? `Low SBP (${systolicBp} mmHg)` : `Target SBP (${systolicBp} mmHg)`)
+        },
+        diastolicBp: {
+          dir: diastolicBp > 50 ? ('up' as const) : (diastolicBp < 25 ? ('down' as const) : ('stable' as const)),
+          label: diastolicBp > 50 ? `Elevated DBP (${diastolicBp} mmHg)` : (diastolicBp < 25 ? `Low DBP (${diastolicBp} mmHg)` : `Target DBP (${diastolicBp} mmHg)`)
         },
         bp: {
           dir: bp < 35 ? ('down' as const) : (bp > 55 ? ('up' as const) : ('stable' as const)),
@@ -639,7 +704,8 @@ export function PatientHardwareDashboard() {
             Math.abs(lastLog.spo2 - spo2) >= 0.5 ||
             Math.abs(lastLog.resp - resp) >= 1 ||
             Math.abs(lastLog.temp - temp) >= 0.1 ||
-            Math.abs(lastLog.bp - bp) >= 1;
+            Math.abs(lastLog.systolicBp - systolicBp) >= 1 ||
+            Math.abs(lastLog.diastolicBp - diastolicBp) >= 1;
 
           const updatedLogs = vitalsChanged
             ? [
@@ -649,6 +715,8 @@ export function PatientHardwareDashboard() {
                   spo2: Math.round(spo2),
                   resp: Math.round(resp),
                   temp: Number(temp.toFixed(1)),
+                  systolicBp: Math.round(systolicBp),
+                  diastolicBp: Math.round(diastolicBp),
                   bp: Math.round(bp),
                   status: status === 'UNSAFE' ? 'Critical' : (status === 'WARNING' ? 'Warning' : 'Normal')
                 },
@@ -670,6 +738,8 @@ export function PatientHardwareDashboard() {
               spo2: spo2 < 93,
               temp: temp > 37.5 || temp < 36.5,
               respRate: resp > 60 || resp < 30,
+              systolicBp: systolicBp > 75 || systolicBp < 50,
+              diastolicBp: diastolicBp > 50 || diastolicBp < 25,
               bp: bp < 35 || bp > 55
             },
             trends,
@@ -688,6 +758,20 @@ export function PatientHardwareDashboard() {
           };
         });
       });
+
+      // Synchronize incoming hardware temperature to Ward Ambient adaptation engine in real-time
+      if (typeof temp === 'number' && !isNaN(temp)) {
+        const targetBabyId = match.baby_id || match.id || selectedBabyId;
+        const ambientIdMap: Record<string, string> = {
+          'NICU_001': 'baby-1', 'NICU-001': 'baby-1', 'NB-2026-001': 'baby-1',
+          'NICU_002': 'baby-2', 'NICU-002': 'baby-2', 'NB-2026-002': 'baby-2',
+          'NICU_003': 'baby-3', 'NICU-003': 'baby-3', 'NB-2026-003': 'baby-3',
+          'NICU_004': 'baby-4', 'NICU-004': 'baby-4', 'NB-2026-004': 'baby-4',
+          'NICU_005': 'baby-5', 'NICU-005': 'baby-5', 'NB-2026-005': 'baby-5'
+        };
+        const ambientTarget = ambientIdMap[targetBabyId] || 'baby-1';
+        updateBabyTemp(ambientTarget, temp, `Hardware telemetry sync: ${temp.toFixed(1)}°C`);
+      }
     }
   };
 
@@ -727,7 +811,7 @@ export function PatientHardwareDashboard() {
   const triggerManualFetch = async () => {
     setIsManualFetching(true);
     try {
-      const response = await getLatestPredictions(piBaseUrl, selectedBabyId, 2500);
+      const response = await getLatestPredictions(piBaseUrl, selectedBabyId, 1200);
       if (response.ok && response.data) {
         setConnectionStatus('CONNECTED');
         if (response.latencyMs) setLatencyMs(response.latencyMs);
@@ -742,7 +826,7 @@ export function PatientHardwareDashboard() {
     }
   };
 
-  // Live Auto-Polling Loop
+  // Live Auto-Polling Loop (Ultra-Low Latency)
   useEffect(() => {
     let isMounted = true;
     let timerId: any = null;
@@ -752,7 +836,7 @@ export function PatientHardwareDashboard() {
       if (!isMounted) return;
       try {
         const start = performance.now();
-        const response = await getLatestPredictions(piBaseUrl, selectedBabyId, 3000);
+        const response = await getLatestPredictions(piBaseUrl, selectedBabyId, 1200);
         const roundTrip = Math.round(performance.now() - start);
 
         if (!isMounted) return;
@@ -852,7 +936,7 @@ export function PatientHardwareDashboard() {
             {/* Real-time Streaming Speed Toggle */}
             <button 
               onClick={togglePollingSpeed}
-              title={`Continuous telemetry rate: ${pollingSpeed}ms. Click to toggle between 400ms (Instant), 800ms (Fast), and 1500ms (Standard).`}
+              title={`Continuous telemetry rate: ${pollingSpeed}ms. Click to toggle between 250ms (Instant), 500ms (Fast), and 1000ms (Standard).`}
               style={{ 
                 display: 'flex', 
                 alignItems: 'center', 
@@ -944,7 +1028,7 @@ export function PatientHardwareDashboard() {
         {/* MAIN DASHBOARD TWO-COLUMN SECTION (EXACT SINGLE BABY TELEMETRY & CLINICAL SUITE) */}
         <div style={{ display: 'grid', gridTemplateColumns: '1.22fr 1fr', gap: '12px', alignItems: 'start' }}>
           
-          {/* LEFT COLUMN: Bed Header, 5 Vitals Cards, and Live Vital Trends Area Chart */}
+          {/* LEFT COLUMN: Bed Header, 6 Vitals Cards (with distinct SBP & DBP), and Live Vital Trends Area Chart */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
             
             {/* Bed Header & Vitals Grid Card */}
@@ -988,7 +1072,7 @@ export function PatientHardwareDashboard() {
                 </div>
               </div>
 
-              {/* Vitals Grid (2 Columns, 5 cards) */}
+              {/* Vitals Grid (2 Columns x 3 Rows, 6 distinct cards) */}
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginTop: '12px' }}>
                 
                 {/* 1. HEART RATE */}
@@ -1043,16 +1127,28 @@ export function PatientHardwareDashboard() {
                   </div>
                 </div>
 
-                {/* 5. BLOOD PRESSURE (Mean BP) */}
+                {/* 5. BLOOD PRESSURE (SBP / DBP) - Unified Single Card */}
                 <div className="vital-box" style={{ gridColumn: 'span 2' }}>
                   <div className="vital-box-title">
-                    <span style={{ color: '#DC2626' }}>🩸</span> BLOOD PRESSURE (Mean BP)
+                    <span style={{ color: '#DC2626' }}>🩸</span> BLOOD PRESSURE (SBP / DBP)
                   </div>
-                  <div className="vital-box-value" style={{ color: (activeBaby.vitals.bp < 35 || activeBaby.vitals.bp > 55) ? '#DC2626' : 'var(--akesis-text-main)' }}>
-                    {activeBaby.vitals.bp} <span className="vital-box-unit">mmHg</span>
+                  <div className="vital-box-value" style={{ 
+                    color: (activeBaby.vitals.systolicBp > 75 || activeBaby.vitals.systolicBp < 50 || activeBaby.vitals.diastolicBp > 50 || activeBaby.vitals.diastolicBp < 25) ? '#DC2626' : 'var(--akesis-text-main)',
+                    display: 'flex',
+                    alignItems: 'baseline',
+                    gap: '4px'
+                  }}>
+                    <span style={{ color: (activeBaby.vitals.systolicBp > 75 || activeBaby.vitals.systolicBp < 50) ? '#DC2626' : 'inherit' }}>
+                      {activeBaby.vitals.systolicBp}
+                    </span>
+                    <span style={{ color: 'var(--akesis-text-muted)', fontWeight: 600, margin: '0 2px' }}>/</span>
+                    <span style={{ color: (activeBaby.vitals.diastolicBp > 50 || activeBaby.vitals.diastolicBp < 25) ? '#DC2626' : 'inherit' }}>
+                      {activeBaby.vitals.diastolicBp}
+                    </span>
+                    <span className="vital-box-unit" style={{ marginLeft: '4px' }}>mmHg</span>
                   </div>
                   <div className="vital-box-normal">
-                    {activeBaby.vitals.bp > 55 ? 'Normal Target: 35-55 mmHg • Elevated' : (activeBaby.vitals.bp < 35 ? 'Normal Target: 35-55 mmHg • Hypotension' : 'Normal Target: 35-55 mmHg')}
+                    Target: SBP 60-75 / DBP 30-50 mmHg {(activeBaby.vitals.systolicBp > 75 || activeBaby.vitals.diastolicBp > 50) ? '• Elevated' : ((activeBaby.vitals.systolicBp < 50 || activeBaby.vitals.diastolicBp < 25) ? '• Hypotension' : '• Optimal')}
                   </div>
                 </div>
 

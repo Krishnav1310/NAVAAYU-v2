@@ -26,8 +26,11 @@ import {
   ResponsiveContainer 
 } from 'recharts';
 import { IncubatorDetailModal } from '../../components/Modals/IncubatorDetailModal';
+import { WardAmbientTemperatureModal } from '../../components/Modals/WardAmbientTemperatureModal';
+import { useWardAmbient } from '../../context/WardAmbientContext';
+import { getResolvedPiBaseUrl } from '../../services/api';
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://127.0.0.1:5001';
+const getBackendUrl = () => getResolvedPiBaseUrl();
 
 export interface BabyRecord {
   id: string;
@@ -332,6 +335,7 @@ const generateWaveforms = () => Array.from({ length: 30 }, (_, i) => ({
 }));
 
 export function PatientSoftwareDashboard() {
+  const { openAmbientModal, wardAverageFormatted, babies: ambientBabies, updateBabyTemp } = useWardAmbient();
   const [babies, setBabies] = useState<BabyRecord[]>(INITIAL_BABIES_DIRECTORY);
   const [selectedBabyId, setSelectedBabyId] = useState<string>("NB-2026-002");
   const [waveformData, setWaveformData] = useState(generateWaveforms());
@@ -349,19 +353,32 @@ export function PatientSoftwareDashboard() {
       setModalBaby(target);
     }
     setIsModalOpen(true);
-    fetch(`${API_BASE_URL}/api/select_baby`, {
+    const base = getBackendUrl();
+    fetch(`${base}/api/select_baby`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ id })
     }).catch(() => {});
   };
 
-  // PC3 Vision & Bio-Acoustic backend polling
+  // PC3 Vision & Bio-Acoustic backend polling (Ultra-Low Latency)
   useEffect(() => {
     let isMounted = true;
+    let timerId: any = null;
+
     const pollBackend = async () => {
+      if (!isMounted) return;
+      const base = getBackendUrl();
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 1200);
+
       try {
-        const res = await fetch(`${API_BASE_URL}/api/dashboard`, { cache: 'no-store' });
+        const res = await fetch(`${base}/api/dashboard?_t=${Date.now()}`, { 
+          cache: 'no-store',
+          signal: controller.signal 
+        });
+        clearTimeout(timeoutId);
+
         if (res.ok && isMounted) {
           setIsBackendConnected(true);
           const json = await res.json();
@@ -369,6 +386,20 @@ export function PatientSoftwareDashboard() {
             setBabies(prev => prev.map(b => {
               const remote = json.babies.find((rb: any) => rb.id === b.id || rb.id === b.bedId);
               if (!remote) return b;
+
+              const remoteTemp = remote.vitals?.temp;
+              if (typeof remoteTemp === 'number' && !isNaN(remoteTemp)) {
+                const ambientIdMap: Record<string, string> = {
+                  'NB-2026-001': 'baby-1', 'NICU-001': 'baby-1',
+                  'NB-2026-002': 'baby-2', 'NICU-002': 'baby-2',
+                  'NB-2026-003': 'baby-3', 'NICU-003': 'baby-3',
+                  'NB-2026-004': 'baby-4', 'NICU-004': 'baby-4',
+                  'NB-2026-005': 'baby-5', 'NICU-005': 'baby-5'
+                };
+                const ambId = ambientIdMap[b.id] || ambientIdMap[b.bedId] || 'baby-1';
+                updateBabyTemp(ambId, remoteTemp, `Remote sensor sync: ${remoteTemp}°C`);
+              }
+
               return {
                 ...b,
                 status: remote.status === 'UNSAFE' ? 'CRITICAL' : (remote.status === 'WARNING' ? 'MODERATE' : 'NORMAL'),
@@ -386,17 +417,21 @@ export function PatientSoftwareDashboard() {
           setIsBackendConnected(false);
         }
       } catch {
+        clearTimeout(timeoutId);
         if (isMounted) setIsBackendConnected(false);
+      } finally {
+        if (isMounted) {
+          timerId = setTimeout(pollBackend, 500); // 500ms snappy polling
+        }
       }
     };
 
     pollBackend();
-    const pollInterval = setInterval(pollBackend, 2500);
     return () => {
       isMounted = false;
-      clearInterval(pollInterval);
+      if (timerId) clearTimeout(timerId);
     };
-  }, []);
+  }, [updateBabyTemp]);
 
   // Live real-time waveform updates
   useEffect(() => {
@@ -435,6 +470,26 @@ export function PatientSoftwareDashboard() {
 
         {/* Status Counter Chips */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+          <button
+            onClick={openAmbientModal}
+            style={{
+              fontSize: '11px',
+              fontWeight: 800,
+              padding: '5px 14px',
+              background: '#FFF7ED',
+              color: '#EA580C',
+              borderRadius: '8px',
+              border: '1.5px solid #FFEDD5',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              transition: 'all 0.15s ease'
+            }}
+          >
+            <Thermometer size={13} color="#EA580C" />
+            Ward Ambient: {wardAverageFormatted} ({ambientBabies.length} Babies Live)
+          </button>
           <span style={{ fontSize: '11px', fontWeight: 800, padding: '4px 12px', background: '#F0FDF4', color: '#15803D', borderRadius: '8px', border: '1px solid #DCFCE7' }}>
             3 Normal
           </span>
@@ -929,6 +984,9 @@ export function PatientSoftwareDashboard() {
         onClose={() => setIsModalOpen(false)}
         baby={babies.find(b => b.id === (modalBaby?.id || selectedBabyId)) || modalBaby || activeBaby}
       />
+
+      {/* COMPACT 5-BABY WARD AMBIENT TEMPERATURE MODAL */}
+      <WardAmbientTemperatureModal />
     </main>
   );
 }

@@ -1,250 +1,355 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { 
   Thermometer, 
   Droplets, 
   Wind, 
   Volume2, 
-  ShieldCheck, 
-  CheckCircle2, 
-  TrendingUp,
-  Activity
+  ArrowUpRight,
+  ShieldCheck,
+  CheckCircle2,
+  Sparkles
 } from 'lucide-react';
-import { 
-  AreaChart, 
-  Area, 
-  XAxis, 
-  YAxis, 
-  CartesianGrid, 
-  Tooltip, 
-  ResponsiveContainer 
-} from 'recharts';
-
-interface EnvironmentalMetric {
-  id: string;
-  name: string;
-  value: string;
-  unit: string;
-  normalRange: string;
-  status: 'NORMAL' | 'WARNING';
-  statusLabel: string;
-  icon: 'temp' | 'hum' | 'aqi' | 'noise';
-  summary: string;
-}
-
-const ESSENTIAL_METRICS: EnvironmentalMetric[] = [
-  {
-    id: "env-temp",
-    name: "Ward Ambient Temperature",
-    value: "24.8",
-    unit: "°C",
-    normalRange: "24.0 - 26.0 °C",
-    status: "NORMAL",
-    statusLabel: "OPTIMAL",
-    icon: "temp",
-    summary: "Maintains neonatal thermal stability and prevents cold stress."
-  },
-  {
-    id: "env-hum",
-    name: "Relative Humidity",
-    value: "52",
-    unit: "%",
-    normalRange: "40 - 60 %",
-    status: "NORMAL",
-    statusLabel: "OPTIMAL",
-    icon: "hum",
-    summary: "Reduces transepidermal water loss and protects premature infant skin."
-  },
-  {
-    id: "env-aqi",
-    name: "Air Cleanliness (AQI)",
-    value: "22",
-    unit: "AQI",
-    normalRange: "0 - 50 AQI",
-    status: "NORMAL",
-    statusLabel: "HEPA ACTIVE",
-    icon: "aqi",
-    summary: "Positive-pressure filtration eliminating airborne particulate matter."
-  },
-  {
-    id: "env-noise",
-    name: "Acoustic Noise Level",
-    value: "42",
-    unit: "dB",
-    normalRange: "< 45 dB",
-    status: "NORMAL",
-    statusLabel: "CALM",
-    icon: "noise",
-    summary: "Complies with AAP guidelines to protect infant neurological sleep cycles."
-  }
-];
-
-const HOURLY_TRENDS = [
-  { time: '04:00', temp: 24.6, hum: 51, noise: 38 },
-  { time: '08:00', temp: 24.9, hum: 53, noise: 44 },
-  { time: '12:00', temp: 24.8, hum: 52, noise: 41 },
-  { time: '16:00', temp: 25.0, hum: 52, noise: 43 },
-  { time: '20:00', temp: 24.7, hum: 52, noise: 40 },
-  { time: 'Current', temp: 24.8, hum: 52, noise: 42 }
-];
+import { WardAmbientTemperatureModal } from '../../components/Modals/WardAmbientTemperatureModal';
+import { useWardAmbient } from '../../context/WardAmbientContext';
 
 export function EnvironmentalFactorDashboard() {
-  const [metrics] = useState<EnvironmentalMetric[]>(ESSENTIAL_METRICS);
+  const {
+    wardAverage,
+    wardAverageFormatted,
+    differenceFormatted,
+    babies,
+    openAmbientModal
+  } = useWardAmbient();
 
   return (
-    <main style={{ maxWidth: '1440px', margin: '24px auto 0', padding: '0 28px', display: 'flex', flexDirection: 'column', gap: '22px' }}>
+    <main style={{ maxWidth: '1440px', margin: '24px auto 0', padding: '0 28px', display: 'flex', flexDirection: 'column', gap: '24px' }}>
       
-      {/* 1. HEADER TITLE & STATUS */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '12px' }}>
+      {/* 1. HEADER TITLE & STATUS BAR */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '14px' }}>
         <div>
-          <h2 style={{ fontSize: '22px', fontWeight: 900, color: '#0E7490', margin: 0, letterSpacing: '-0.5px' }}>
+          <h2 style={{ fontSize: '24px', fontWeight: 900, color: '#0E7490', margin: 0, letterSpacing: '-0.5px' }}>
             Environmental Safety & Microclimate
           </h2>
-          <p style={{ color: '#5C7A68', fontSize: '12px', fontWeight: 600, margin: '4px 0 0 0' }}>
-            Real-time ward ambient environment and safety parameters
+          <p style={{ color: '#5C7A68', fontSize: '13px', fontWeight: 600, margin: '5px 0 0 0' }}>
+            Continuous ward microclimate monitoring and dynamic infant neutral thermal zone adaptation
           </p>
         </div>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-          <span style={{ fontSize: '11px', fontWeight: 800, padding: '4px 12px', background: '#F0FDF4', color: '#15803D', borderRadius: '8px', border: '1px solid #DCFCE7', display: 'flex', alignItems: 'center', gap: '6px' }}>
-            <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#22C55E' }} />
+          <button 
+            onClick={openAmbientModal}
+            style={{ 
+              fontSize: '11.5px', 
+              fontWeight: 800, 
+              padding: '7px 16px', 
+              background: '#FFF7ED', 
+              color: '#EA580C', 
+              borderRadius: '9px', 
+              border: '1.5px solid #FFEDD5', 
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              transition: 'all 0.15s ease',
+              boxShadow: '0 2px 6px rgba(234, 88, 12, 0.08)'
+            }}
+          >
+            <Thermometer size={14} color="#EA580C" />
+            Ward Ambient: {wardAverageFormatted} ({babies.length} Babies Live)
+          </button>
+          <span style={{ fontSize: '11.5px', fontWeight: 800, padding: '6px 14px', background: '#F0FDF4', color: '#15803D', borderRadius: '9px', border: '1px solid #DCFCE7', display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <span style={{ width: '7px', height: '7px', borderRadius: '50%', background: '#22C55E' }} />
             All Parameters Normal
           </span>
-          <span style={{ fontSize: '11px', fontWeight: 800, padding: '4px 12px', background: '#FFF7ED', color: '#C2410C', borderRadius: '8px', border: '1px solid #FFEDD5' }}>
-            Simulated Prototype Data
-          </span>
         </div>
       </div>
 
-      {/* 2. FOUR ESSENTIAL METRIC CARDS */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '18px' }}>
-        {metrics.map((m) => {
-          let iconElement = <Thermometer size={22} color="#EA580C" />;
-          let iconBg = '#FFF7ED';
-          let valColor = '#133926';
-
-          if (m.icon === 'hum') {
-            iconElement = <Droplets size={22} color="#0D9488" />;
-            iconBg = '#F0FDFA';
-          } else if (m.icon === 'aqi') {
-            iconElement = <Wind size={22} color="#16A34A" />;
-            iconBg = '#F0FDF4';
-          } else if (m.icon === 'noise') {
-            iconElement = <Volume2 size={22} color="#0891B2" />;
-            iconBg = '#ECFEFF';
-          }
-
-          return (
-            <div 
-              key={m.id}
-              style={{
-                background: '#FFFFFF',
-                borderRadius: '18px',
-                border: '1.5px solid #E2EFE6',
-                padding: '22px 24px',
-                display: 'flex',
-                flexDirection: 'column',
-                justifyContent: 'space-between',
-                boxShadow: '0 4px 16px rgba(16, 100, 60, 0.04)',
-                minHeight: '170px'
-              }}
-            >
-              <div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <div style={{ width: '40px', height: '40px', borderRadius: '10px', background: iconBg, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                    {iconElement}
-                  </div>
-                  <span style={{ fontSize: '10.5px', fontWeight: 900, background: '#DCFCE7', color: '#15803D', padding: '3px 9px', borderRadius: '6px' }}>
-                    {m.statusLabel}
-                  </span>
-                </div>
-
-                <div style={{ marginTop: '14px' }}>
-                  <div style={{ fontSize: '11px', fontWeight: 800, color: '#5C7A68', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                    {m.name}
-                  </div>
-                  <div style={{ display: 'flex', alignItems: 'baseline', gap: '4px', marginTop: '4px' }}>
-                    <span style={{ fontSize: '32px', fontWeight: 900, color: valColor, letterSpacing: '-1px', lineHeight: 1 }}>
-                      {m.value}
-                    </span>
-                    <span style={{ fontSize: '14px', fontWeight: 800, color: '#5C7A68' }}>
-                      {m.unit}
-                    </span>
-                  </div>
-                </div>
-              </div>
-
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid #F1F5F9', paddingTop: '10px', marginTop: '10px', fontSize: '11px' }}>
-                <span style={{ color: '#5C7A68', fontWeight: 700 }}>Safe Target:</span>
-                <span style={{ color: '#0E7490', fontWeight: 800 }}>{m.normalRange}</span>
-              </div>
-            </div>
-          );
-        })}
-      </div>
-
-      {/* 3. 24-HOUR WARD CLIMATE TREND CHART */}
+      {/* 2. PROPERLY FITTED 4 ESSENTIAL MICROCLIMATE CARDS (SPACIOUS 2x2 SCREEN-FITTING GRID) */}
       <div 
-        style={{
-          background: '#FFFFFF',
-          borderRadius: '18px',
-          border: '1.5px solid #E2EFE6',
-          padding: '22px 26px',
-          boxShadow: '0 4px 16px rgba(16, 100, 60, 0.04)'
+        style={{ 
+          display: 'grid', 
+          gridTemplateColumns: 'repeat(auto-fit, minmax(340px, 1fr))', 
+          gap: '22px',
+          alignItems: 'stretch'
         }}
       >
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+        
+        {/* CARD 1: WARD AMBIENT TEMPERATURE (DYNAMIC LIVE ADAPTATION) */}
+        <div 
+          onClick={openAmbientModal}
+          style={{
+            background: '#FFFFFF',
+            borderRadius: '20px',
+            border: '2px solid #FED7AA',
+            padding: '26px 28px',
+            display: 'flex',
+            flexDirection: 'column',
+            justifyContent: 'space-between',
+            boxShadow: '0 8px 24px rgba(234, 88, 12, 0.09)',
+            minHeight: '230px',
+            cursor: 'pointer',
+            transition: 'all 0.2s ease',
+            position: 'relative'
+          }}
+          title="Click to open compact live breakdown and temperature history"
+        >
           <div>
-            <span style={{ fontSize: '14px', fontWeight: 900, color: '#133926', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-              Microclimate Stability Trend (24h)
-            </span>
-            <span style={{ fontSize: '11px', color: '#5C7A68', display: 'block', fontWeight: 600, marginTop: '2px' }}>
-              Continuous atmospheric temperature & humidity regulation
-            </span>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div 
+                style={{ 
+                  width: '48px', 
+                  height: '48px', 
+                  borderRadius: '12px', 
+                  background: '#FFF7ED', 
+                  display: 'flex', 
+                  alignItems: 'center', 
+                  justifyContent: 'center',
+                  border: '1.5px solid #FFEDD5'
+                }}
+              >
+                <Thermometer size={26} color="#EA580C" />
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <span style={{ fontSize: '11px', fontWeight: 900, background: '#FFF7ED', color: '#EA580C', padding: '4px 10px', borderRadius: '8px', border: '1px solid #FFEDD5', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                  {babies.length} BABIES <ArrowUpRight size={12} />
+                </span>
+                <span style={{ fontSize: '11px', fontWeight: 900, background: '#F0FDF4', color: '#15803D', padding: '4px 10px', borderRadius: '8px', border: '1px solid #DCFCE7', display: 'flex', alignItems: 'center', gap: '5px' }}>
+                  <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#22C55E' }} />
+                  LIVE ADAPTATION
+                </span>
+              </div>
+            </div>
+
+            <div style={{ marginTop: '18px' }}>
+              <div style={{ fontSize: '12px', fontWeight: 800, color: '#5C7A68', textTransform: 'uppercase', letterSpacing: '0.6px' }}>
+                Ward Ambient Temperature
+              </div>
+              <div style={{ display: 'flex', alignItems: 'baseline', gap: '6px', marginTop: '6px' }}>
+                <span 
+                  style={{ 
+                    fontSize: '42px', 
+                    fontWeight: 900, 
+                    color: '#133926', 
+                    letterSpacing: '-1.5px', 
+                    lineHeight: 1,
+                    transition: 'color 0.3s ease'
+                  }}
+                >
+                  {wardAverage.toFixed(1)}
+                </span>
+                <span style={{ fontSize: '18px', fontWeight: 800, color: '#5C7A68' }}>
+                  °C
+                </span>
+                <span style={{ fontSize: '12px', color: '#0E7490', fontWeight: 700, marginLeft: '8px', background: '#ECFEFF', padding: '2px 8px', borderRadius: '6px' }}>
+                  Based on {babies.length} babies
+                </span>
+              </div>
+              <p style={{ margin: '8px 0 0 0', fontSize: '12px', color: '#64748B', lineHeight: 1.4, fontWeight: 600 }}>
+                Dynamic neutral thermal zone calculation automatically adjusting to individual infant body temperatures.
+              </p>
+            </div>
           </div>
 
-          <div style={{ display: 'flex', alignItems: 'center', gap: '16px', fontSize: '11px', fontWeight: 800 }}>
-            <span style={{ color: '#EA580C', display: 'flex', alignItems: 'center', gap: '4px' }}>
-              <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#EA580C' }} /> Temperature (°C)
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid #F1F5F9', paddingTop: '14px', marginTop: '16px', fontSize: '12px' }}>
+            <span style={{ color: '#0E7490', fontWeight: 800, display: 'flex', alignItems: 'center', gap: '4px' }}>
+              🔍 Click for Live 5-Baby Grid & History
             </span>
-            <span style={{ color: '#0D9488', display: 'flex', alignItems: 'center', gap: '4px' }}>
-              <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#0D9488' }} /> Humidity (%)
+            <span style={{ color: '#EA580C', fontWeight: 900, background: '#FFF7ED', padding: '3px 10px', borderRadius: '6px', border: '1px solid #FFEDD5' }}>
+              Req: {wardAverageFormatted} (Diff: {differenceFormatted})
             </span>
           </div>
         </div>
 
-        <div style={{ width: '100%', height: '220px' }}>
-          <ResponsiveContainer width="100%" height="100%">
-            <AreaChart data={HOURLY_TRENDS} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-              <defs>
-                <linearGradient id="tempGrad" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#EA580C" stopOpacity={0.2} />
-                  <stop offset="95%" stopColor="#EA580C" stopOpacity={0.0} />
-                </linearGradient>
-                <linearGradient id="humGrad" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#0D9488" stopOpacity={0.2} />
-                  <stop offset="95%" stopColor="#0D9488" stopOpacity={0.0} />
-                </linearGradient>
-              </defs>
-              <CartesianGrid strokeDasharray="3 3" stroke="#F1F5F9" vertical={false} />
-              <XAxis dataKey="time" tick={{ fontSize: 11, fill: '#64748B' }} />
-              <YAxis domain={['auto', 'auto']} tick={{ fontSize: 11, fill: '#64748B' }} />
-              <Tooltip 
-                contentStyle={{ 
-                  borderRadius: '10px', 
-                  border: '1px solid #E2EFE6', 
-                  boxShadow: '0 8px 20px rgba(0,0,0,0.06)', 
-                  background: '#FFFFFF', 
-                  fontSize: '11px', 
-                  fontWeight: 700 
-                }} 
-              />
-              <Area type="monotone" dataKey="temp" stroke="#EA580C" strokeWidth={2.5} fill="url(#tempGrad)" name="Temperature (°C)" />
-              <Area type="monotone" dataKey="hum" stroke="#0D9488" strokeWidth={2} fill="url(#humGrad)" name="Humidity (%)" />
-            </AreaChart>
-          </ResponsiveContainer>
+        {/* CARD 2: RELATIVE HUMIDITY */}
+        <div 
+          style={{
+            background: '#FFFFFF',
+            borderRadius: '20px',
+            border: '1.5px solid #E2EFE6',
+            padding: '26px 28px',
+            display: 'flex',
+            flexDirection: 'column',
+            justifyContent: 'space-between',
+            boxShadow: '0 4px 18px rgba(16, 100, 60, 0.04)',
+            minHeight: '230px'
+          }}
+        >
+          <div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div 
+                style={{ 
+                  width: '48px', 
+                  height: '48px', 
+                  borderRadius: '12px', 
+                  background: '#F0FDFA', 
+                  display: 'flex', 
+                  alignItems: 'center', 
+                  justifyContent: 'center',
+                  border: '1.5px solid #CCFBF1'
+                }}
+              >
+                <Droplets size={26} color="#0D9488" />
+              </div>
+              <span style={{ fontSize: '11px', fontWeight: 900, background: '#DCFCE7', color: '#15803D', padding: '4px 10px', borderRadius: '8px' }}>
+                OPTIMAL
+              </span>
+            </div>
+
+            <div style={{ marginTop: '18px' }}>
+              <div style={{ fontSize: '12px', fontWeight: 800, color: '#5C7A68', textTransform: 'uppercase', letterSpacing: '0.6px' }}>
+                Relative Humidity
+              </div>
+              <div style={{ display: 'flex', alignItems: 'baseline', gap: '6px', marginTop: '6px' }}>
+                <span style={{ fontSize: '42px', fontWeight: 900, color: '#133926', letterSpacing: '-1.5px', lineHeight: 1 }}>
+                  52
+                </span>
+                <span style={{ fontSize: '18px', fontWeight: 800, color: '#5C7A68' }}>
+                  %
+                </span>
+                <span style={{ fontSize: '12px', color: '#0D9488', fontWeight: 700, marginLeft: '8px', background: '#F0FDFA', padding: '2px 8px', borderRadius: '6px' }}>
+                  Target: 40 - 60%
+                </span>
+              </div>
+              <p style={{ margin: '8px 0 0 0', fontSize: '12px', color: '#64748B', lineHeight: 1.4, fontWeight: 600 }}>
+                Prevents transepidermal water loss and protects immature stratum corneum skin barriers in premature neonates.
+              </p>
+            </div>
+          </div>
+
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid #F1F5F9', paddingTop: '14px', marginTop: '16px', fontSize: '12px' }}>
+            <span style={{ color: '#5C7A68', fontWeight: 700 }}>Hygrometer Status: Active</span>
+            <span style={{ color: '#0D9488', fontWeight: 800 }}>Safe Range: 40 - 60 %</span>
+          </div>
         </div>
+
+        {/* CARD 3: AIR CLEANLINESS (AQI) */}
+        <div 
+          style={{
+            background: '#FFFFFF',
+            borderRadius: '20px',
+            border: '1.5px solid #E2EFE6',
+            padding: '26px 28px',
+            display: 'flex',
+            flexDirection: 'column',
+            justifyContent: 'space-between',
+            boxShadow: '0 4px 18px rgba(16, 100, 60, 0.04)',
+            minHeight: '230px'
+          }}
+        >
+          <div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div 
+                style={{ 
+                  width: '48px', 
+                  height: '48px', 
+                  borderRadius: '12px', 
+                  background: '#F0FDF4', 
+                  display: 'flex', 
+                  alignItems: 'center', 
+                  justifyContent: 'center',
+                  border: '1.5px solid #DCFCE7'
+                }}
+              >
+                <Wind size={26} color="#16A34A" />
+              </div>
+              <span style={{ fontSize: '11px', fontWeight: 900, background: '#DCFCE7', color: '#15803D', padding: '4px 10px', borderRadius: '8px' }}>
+                HEPA ACTIVE
+              </span>
+            </div>
+
+            <div style={{ marginTop: '18px' }}>
+              <div style={{ fontSize: '12px', fontWeight: 800, color: '#5C7A68', textTransform: 'uppercase', letterSpacing: '0.6px' }}>
+                Air Cleanliness (AQI)
+              </div>
+              <div style={{ display: 'flex', alignItems: 'baseline', gap: '6px', marginTop: '6px' }}>
+                <span style={{ fontSize: '42px', fontWeight: 900, color: '#133926', letterSpacing: '-1.5px', lineHeight: 1 }}>
+                  22
+                </span>
+                <span style={{ fontSize: '18px', fontWeight: 800, color: '#5C7A68' }}>
+                  AQI
+                </span>
+                <span style={{ fontSize: '12px', color: '#16A34A', fontWeight: 700, marginLeft: '8px', background: '#F0FDF4', padding: '2px 8px', borderRadius: '6px' }}>
+                  PM2.5 Clean
+                </span>
+              </div>
+              <p style={{ margin: '8px 0 0 0', fontSize: '12px', color: '#64748B', lineHeight: 1.4, fontWeight: 600 }}>
+                Continuous positive-pressure laminar filtration eliminating fine airborne particulate matter and allergens.
+              </p>
+            </div>
+          </div>
+
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid #F1F5F9', paddingTop: '14px', marginTop: '16px', fontSize: '12px' }}>
+            <span style={{ color: '#5C7A68', fontWeight: 700 }}>Filtration: 99.97% HEPA</span>
+            <span style={{ color: '#16A34A', fontWeight: 800 }}>Safe Range: 0 - 50 AQI</span>
+          </div>
+        </div>
+
+        {/* CARD 4: ACOUSTIC NOISE LEVEL */}
+        <div 
+          style={{
+            background: '#FFFFFF',
+            borderRadius: '20px',
+            border: '1.5px solid #E2EFE6',
+            padding: '26px 28px',
+            display: 'flex',
+            flexDirection: 'column',
+            justifyContent: 'space-between',
+            boxShadow: '0 4px 18px rgba(16, 100, 60, 0.04)',
+            minHeight: '230px'
+          }}
+        >
+          <div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div 
+                style={{ 
+                  width: '48px', 
+                  height: '48px', 
+                  borderRadius: '12px', 
+                  background: '#ECFEFF', 
+                  display: 'flex', 
+                  alignItems: 'center', 
+                  justifyContent: 'center',
+                  border: '1.5px solid #CFFAFE'
+                }}
+              >
+                <Volume2 size={26} color="#0891B2" />
+              </div>
+              <span style={{ fontSize: '11px', fontWeight: 900, background: '#DCFCE7', color: '#15803D', padding: '4px 10px', borderRadius: '8px' }}>
+                CALM
+              </span>
+            </div>
+
+            <div style={{ marginTop: '18px' }}>
+              <div style={{ fontSize: '12px', fontWeight: 800, color: '#5C7A68', textTransform: 'uppercase', letterSpacing: '0.6px' }}>
+                Acoustic Noise Level
+              </div>
+              <div style={{ display: 'flex', alignItems: 'baseline', gap: '6px', marginTop: '6px' }}>
+                <span style={{ fontSize: '42px', fontWeight: 900, color: '#133926', letterSpacing: '-1.5px', lineHeight: 1 }}>
+                  42
+                </span>
+                <span style={{ fontSize: '18px', fontWeight: 800, color: '#5C7A68' }}>
+                  dB
+                </span>
+                <span style={{ fontSize: '12px', color: '#0891B2', fontWeight: 700, marginLeft: '8px', background: '#ECFEFF', padding: '2px 8px', borderRadius: '6px' }}>
+                  AAP Compliant
+                </span>
+              </div>
+              <p style={{ margin: '8px 0 0 0', fontSize: '12px', color: '#64748B', lineHeight: 1.4, fontWeight: 600 }}>
+                Maintains acoustic ward levels below AAP thresholds to safeguard fragile infant neurological sleep architecture.
+              </p>
+            </div>
+          </div>
+
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid #F1F5F9', paddingTop: '14px', marginTop: '16px', fontSize: '12px' }}>
+            <span style={{ color: '#5C7A68', fontWeight: 700 }}>Peak Sound: 44 dB</span>
+            <span style={{ color: '#0891B2', fontWeight: 800 }}>Safe Target: &lt; 45 dB</span>
+          </div>
+        </div>
+
       </div>
 
+      {/* COMPACT 5-BABY WARD AMBIENT TEMPERATURE MODAL */}
+      <WardAmbientTemperatureModal />
     </main>
   );
 }

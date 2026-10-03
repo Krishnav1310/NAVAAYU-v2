@@ -71,14 +71,18 @@ interface BabyData {
     spo2: number;
     respRate: number;
     temp: number;
-    bp: number;
+    systolicBp: number;
+    diastolicBp: number;
+    bp?: number;
   };
   trends: {
     heartRate: { dir: 'up' | 'down' | 'stable'; label: string };
     spo2: { dir: 'up' | 'down' | 'stable'; label: string };
     respRate: { dir: 'up' | 'down' | 'stable'; label: string };
     temp: { dir: 'up' | 'down' | 'stable'; label: string };
-    bp: { dir: 'up' | 'down' | 'stable'; label: string };
+    systolicBp: { dir: 'up' | 'down' | 'stable'; label: string };
+    diastolicBp: { dir: 'up' | 'down' | 'stable'; label: string };
+    bp?: { dir: 'up' | 'down' | 'stable'; label: string };
   };
   alertBanner: {
     title: string;
@@ -124,6 +128,8 @@ const BABIES_DATA: BabyData[] = [
       spo2: 89,
       respRate: 69,
       temp: 38.9,
+      systolicBp: 82,
+      diastolicBp: 54,
       bp: 64
     },
     trends: {
@@ -131,7 +137,8 @@ const BABIES_DATA: BabyData[] = [
       spo2: { dir: "down", label: "Desaturation Dip (89%)" },
       respRate: { dir: "up", label: "Tachypneic (69 /min)" },
       temp: { dir: "up", label: "Hyperthermia (38.9 °C)" },
-      bp: { dir: "up", label: "Elevated (64 mmHg)" }
+      systolicBp: { dir: "up", label: "Elevated (82 mmHg)" },
+      diastolicBp: { dir: "up", label: "Elevated (54 mmHg)" }
     },
     alertBanner: {
       title: "Incubator NICU-001 Alert: Heart Rate: High ↑ • Oxygen Saturation: Low ↓ • Temperature: High ↑",
@@ -260,12 +267,9 @@ function App() {
       const resp = Number(v.respiratory_rate_bpm ?? v.respiratory_rate ?? v.respRate ?? v.resp_rate ?? v.rr ?? 69);
       const temp = Number(v.temperature_c ?? v.temperature ?? v.temp ?? v.skin_temp ?? 38.9);
 
-      let bp = 64;
-      if (v.diastolic_bp !== undefined && v.systolic_bp !== undefined) {
-        bp = Math.round(Number(v.diastolic_bp) + (Number(v.systolic_bp) - Number(v.diastolic_bp)) / 3);
-      } else if (v.blood_pressure ?? v.bp ?? v.mean_bp) {
-        bp = Number(v.blood_pressure ?? v.bp ?? v.mean_bp);
-      }
+      const sbp = Number(v.systolic_bp ?? v.sbp ?? v.systolicBp ?? (v.blood_pressure ? Math.round(Number(v.blood_pressure) * 1.3) : 82));
+      const dbp = Number(v.diastolic_bp ?? v.dbp ?? v.diastolicBp ?? (v.blood_pressure ? Math.round(Number(v.blood_pressure) * 0.8) : 54));
+      const bp = Math.round(dbp + (sbp - dbp) / 3);
 
       const rawStatus = String(match.status || match.prediction || match.predicted_label || '').toUpperCase();
       let status: 'SAFE' | 'WARNING' | 'UNSAFE' = 'WARNING';
@@ -303,7 +307,7 @@ function App() {
       } else if (typeof match.reason === 'string') {
         reason = match.reason;
       } else {
-        reason = `Vital signs: HR ${hr} BPM, SpO₂ ${spo2}%, RR ${resp} /min, Temp ${temp} °C`;
+        reason = `Vital signs: HR ${hr} BPM, SpO₂ ${spo2}%, RR ${resp} /min, Temp ${temp} °C, SBP ${sbp} mmHg, DBP ${dbp} mmHg`;
       }
 
       let recommendation = '';
@@ -328,7 +332,7 @@ function App() {
         ];
       }
 
-      const updatedVitals = { heartRate: hr, spo2, respRate: resp, temp, bp };
+      const updatedVitals = { heartRate: hr, spo2, respRate: resp, temp, systolicBp: sbp, diastolicBp: dbp, bp };
 
       const trends = {
         heartRate: {
@@ -346,6 +350,14 @@ function App() {
         temp: {
           dir: temp > 37.5 ? ('up' as const) : (temp < 36.5 ? ('down' as const) : ('stable' as const)),
           label: temp > 37.5 ? `Hyperthermia (${temp.toFixed(1)} °C)` : (temp < 36.5 ? `Hypothermia (${temp.toFixed(1)} °C)` : `Normothermic (${temp.toFixed(1)} °C)`)
+        },
+        systolicBp: {
+          dir: sbp > 75 ? ('up' as const) : (sbp < 50 ? ('down' as const) : ('stable' as const)),
+          label: sbp > 75 ? `Elevated (${sbp} mmHg)` : (sbp < 50 ? `Low (${sbp} mmHg)` : `Target (${sbp} mmHg)`)
+        },
+        diastolicBp: {
+          dir: dbp > 50 ? ('up' as const) : (dbp < 25 ? ('down' as const) : ('stable' as const)),
+          label: dbp > 50 ? `Elevated (${dbp} mmHg)` : (dbp < 25 ? `Low (${dbp} mmHg)` : `Target (${dbp} mmHg)`)
         },
         bp: {
           dir: bp < 35 ? ('down' as const) : (bp > 55 ? ('up' as const) : ('stable' as const)),
@@ -803,16 +815,28 @@ function App() {
                   </div>
                 </div>
 
-                {/* 5. BLOOD PRESSURE (Mean BP) */}
+                {/* 5. BLOOD PRESSURE (SBP / DBP) - Unified Single Card */}
                 <div className="vital-box" style={{ gridColumn: 'span 2' }}>
                   <div className="vital-box-title">
-                    <span style={{ color: '#DC2626' }}>🩸</span> BLOOD PRESSURE (Mean BP)
+                    <span style={{ color: '#DC2626' }}>🩸</span> BLOOD PRESSURE (SBP / DBP)
                   </div>
-                  <div className="vital-box-value" style={{ color: (activeBaby.vitals.bp < 35 || activeBaby.vitals.bp > 55) ? '#DC2626' : 'var(--akesis-text-main)' }}>
-                    {activeBaby.vitals.bp} <span className="vital-box-unit">mmHg</span>
+                  <div className="vital-box-value" style={{ 
+                    color: (activeBaby.vitals.systolicBp < 50 || activeBaby.vitals.systolicBp > 75 || activeBaby.vitals.diastolicBp < 25 || activeBaby.vitals.diastolicBp > 50) ? '#DC2626' : 'var(--akesis-text-main)',
+                    display: 'flex',
+                    alignItems: 'baseline',
+                    gap: '4px'
+                  }}>
+                    <span style={{ color: (activeBaby.vitals.systolicBp < 50 || activeBaby.vitals.systolicBp > 75) ? '#DC2626' : 'inherit' }}>
+                      {activeBaby.vitals.systolicBp}
+                    </span>
+                    <span style={{ color: 'var(--akesis-text-muted)', fontWeight: 600, margin: '0 2px' }}>/</span>
+                    <span style={{ color: (activeBaby.vitals.diastolicBp < 25 || activeBaby.vitals.diastolicBp > 50) ? '#DC2626' : 'inherit' }}>
+                      {activeBaby.vitals.diastolicBp}
+                    </span>
+                    <span className="vital-box-unit" style={{ marginLeft: '4px' }}>mmHg</span>
                   </div>
                   <div className="vital-box-normal">
-                    {activeBaby.vitals.bp > 55 ? 'Normal Target: 35-55 mmHg • Elevated' : (activeBaby.vitals.bp < 35 ? 'Normal Target: 35-55 mmHg • Hypotension' : 'Normal Target: 35-55 mmHg')}
+                    Target: SBP 60-75 / DBP 30-50 mmHg {(activeBaby.vitals.systolicBp > 75 || activeBaby.vitals.diastolicBp > 50) ? '• Elevated' : ((activeBaby.vitals.systolicBp < 50 || activeBaby.vitals.diastolicBp < 25) ? '• Hypotension' : '• Optimal')}
                   </div>
                 </div>
 

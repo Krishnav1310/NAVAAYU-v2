@@ -13,6 +13,8 @@ import {
 } from 'lucide-react';
 import { type NavaayuModule, NAV_MODULES } from './types/navigation';
 import { HamburgerDrawer } from './components/Navigation/HamburgerDrawer';
+import { WardAmbientProvider } from './context/WardAmbientContext';
+import { WardAmbientNotificationToast } from './components/Notifications/WardAmbientNotificationToast';
 import { PatientSoftwareDashboard } from './modules/PatientSoftware/PatientSoftwareDashboard';
 import { PatientHardwareDashboard } from './modules/PatientHardware/PatientHardwareDashboard';
 import { ClinicalEquipmentDashboard } from './modules/ClinicalEquipment/ClinicalEquipmentDashboard';
@@ -111,7 +113,8 @@ export default function App() {
   }, []);
 
   return (
-    <div style={{ minHeight: '100vh', background: 'var(--akesis-bg)', paddingBottom: '40px' }}>
+    <WardAmbientProvider>
+      <div style={{ minHeight: '100vh', background: 'var(--akesis-bg)', paddingBottom: '40px' }}>
       
       {/* 1. TOP HEADER BAR (TIER 1) */}
       <header className="akesis-header" style={{ padding: '12px 28px', height: '64px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -269,7 +272,10 @@ export default function App() {
         onSelectModule={handleSelectModule} 
       />
 
-      {/* 5. CLINICAL DISCLAIMER & COPYRIGHT FOOTER */}
+      {/* 5. WARD AMBIENT SIGNIFICANT TEMPERATURE CHANGE NOTIFICATION */}
+      <WardAmbientNotificationToast />
+
+      {/* 6. CLINICAL DISCLAIMER & COPYRIGHT FOOTER */}
       <footer style={{ marginTop: '36px', textAlign: 'center', fontSize: '11px', color: 'var(--akesis-text-muted)', lineHeight: 1.6, padding: '0 20px' }}>
         <div>
           Disclaimer: NAVAAYU is an AI-assisted neonatal monitoring prototype and is not a substitute for professional medical judgment, clinical diagnosis, or medical decision thresholds.
@@ -280,5 +286,6 @@ export default function App() {
       </footer>
 
     </div>
+    </WardAmbientProvider>
   );
 }

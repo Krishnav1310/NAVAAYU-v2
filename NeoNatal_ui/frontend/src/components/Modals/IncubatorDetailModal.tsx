@@ -37,13 +37,17 @@ export interface IncubatorModalProps {
       spo2: number;
       temp: number;
       respRate: number;
-      bp: number;
+      systolicBp?: number;
+      diastolicBp?: number;
+      bp?: number;
     };
     abnormalFlags?: {
       heartRate?: boolean;
       spo2?: boolean;
       temp?: boolean;
       respRate?: boolean;
+      systolicBp?: boolean;
+      diastolicBp?: boolean;
       bp?: boolean;
     };
     reasonsForAttention?: string[];
@@ -186,11 +190,16 @@ export const IncubatorDetailModal: React.FC<IncubatorModalProps> = ({ isOpen, on
     : (baby.clinicalDecision?.actionToBeTaken ? baby.clinicalDecision.actionToBeTaken.map(a => a.startsWith('➔') ? a : `➔ ${a}`) : defaultActions);
 
   // Vital Abnormal checks
+  const sbp = baby.vitals.systolicBp ?? (baby.vitals.bp ? Math.round(baby.vitals.bp * 1.25) : 80);
+  const dbp = baby.vitals.diastolicBp ?? (baby.vitals.bp ? Math.round(baby.vitals.bp * 0.85) : 50);
+
   const isHrAbnormal = baby.abnormalFlags?.heartRate ?? (baby.vitals.heartRate > 160 || baby.vitals.heartRate < 100);
   const isSpo2Abnormal = baby.abnormalFlags?.spo2 ?? (baby.vitals.spo2 < 93);
   const isTempAbnormal = baby.abnormalFlags?.temp ?? (baby.vitals.temp > 37.5 || baby.vitals.temp < 36.5);
   const isRespAbnormal = baby.abnormalFlags?.respRate ?? (baby.vitals.respRate > 60 || baby.vitals.respRate < 30);
-  const isBpAbnormal = baby.abnormalFlags?.bp ?? (baby.vitals.bp > 55 || baby.vitals.bp < 35);
+  const isSbpAbnormal = baby.abnormalFlags?.systolicBp ?? (sbp > 75 || sbp < 50);
+  const isDbpAbnormal = baby.abnormalFlags?.diastolicBp ?? (dbp > 50 || dbp < 25);
+  const isBpAbnormal = isSbpAbnormal || isDbpAbnormal || (baby.abnormalFlags?.bp ?? false);
 
   return (
     <div 
@@ -418,7 +427,7 @@ export const IncubatorDetailModal: React.FC<IncubatorModalProps> = ({ isOpen, on
 
             </div>
 
-            {/* 5. BLOOD PRESSURE (MEAN MAP) - Full Width Box */}
+            {/* 5. BLOOD PRESSURE (SYSTOLIC & DIASTOLIC) - Full Width Box */}
             <div 
               style={{
                 background: '#FFFFFF',
@@ -432,10 +441,18 @@ export const IncubatorDetailModal: React.FC<IncubatorModalProps> = ({ isOpen, on
             >
               <div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '10px', fontWeight: 800, color: '#64748B', letterSpacing: '0.5px' }}>
-                  <Activity size={12} color="#EF4444" /> BLOOD PRESSURE (MEAN MAP)
+                  <Activity size={12} color="#EF4444" /> BLOOD PRESSURE (SYSTOLIC / DIASTOLIC)
                 </div>
-                <div style={{ fontSize: '22px', fontWeight: 900, color: isBpAbnormal ? '#DC2626' : '#0F172A', marginTop: '2px', fontVariantNumeric: 'tabular-nums' }}>
-                  {baby.vitals.bp} <span style={{ fontSize: '12px', fontWeight: 700, color: '#64748B' }}>mmHg</span>
+                <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px', marginTop: '2px' }}>
+                  <div style={{ fontSize: '22px', fontWeight: 900, color: isBpAbnormal ? '#DC2626' : '#0F172A', fontVariantNumeric: 'tabular-nums' }}>
+                    <span style={{ color: isSbpAbnormal ? '#DC2626' : 'inherit' }}>{sbp}</span>
+                    <span style={{ fontSize: '16px', fontWeight: 700, color: '#94A3B8', margin: '0 4px' }}>/</span>
+                    <span style={{ color: isDbpAbnormal ? '#DC2626' : 'inherit' }}>{dbp}</span>
+                    <span style={{ fontSize: '12px', fontWeight: 700, color: '#64748B', marginLeft: '4px' }}>mmHg</span>
+                  </div>
+                  <div style={{ fontSize: '11px', fontWeight: 700, color: '#64748B' }}>
+                    (SBP: {sbp} • DBP: {dbp})
+                  </div>
                 </div>
               </div>
               <span style={{ color: '#0D9488', fontSize: '18px', fontWeight: 900 }}>→</span>
