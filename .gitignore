@@ -44,3 +44,5 @@ desktop.ini
 # Temporary files
 temp.py
 *.tmp
+*.zip
+src_backup_pre_integration/
